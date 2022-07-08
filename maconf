@@ -44,7 +44,9 @@ maconf_process() {
 		dock_restart|\
 		finder_|\
 		finder_fullpath|\
-		finder_restart)
+		finder_restart|\
+		screencapture_|\
+		screencapture_location)
 			[ -z "$arg2" ] && "maconf_help_$arg1" "$@" && return
 			[ $help -ne 0 ] && "maconf_help_${arg1}_$arg2" "$@" && return
 			"maconf_${arg1}_$arg2" "$@"
@@ -165,6 +167,18 @@ maconf_finder_restart() {
 	_restart_finder
 }
 
+maconf_screencapture_location() {
+	val="$1"
+	
+	if [ -z "$val" ]
+	then
+		_read com.apple.screencapture location
+		return
+	fi
+
+  _write com.apple.screencapture location "$val"
+}
+
 maconf_help() {
 	help_cmd="$1"
 
@@ -184,10 +198,17 @@ Get and set various settings in macOS.
 
 Available commands:
 
-	dock       Get or set settings related to the Dock.
-	finder     Get or set settings related to the Finder.
+	dock
+		Get or set settings related to the Dock.
 
-	help       Show this help screen.
+	finder
+		Get or set settings related to the Finder.
+
+	screencapture
+		Get or set settings related to screen captures.
+
+	help
+		Show this help screen.
 
 Available options:
 
@@ -264,19 +285,10 @@ Get or set settings related to the Finder.
 Available settings:
 
 	fullpath
-		Get whether or not the full path is shown.
+		Get or set whether or not the full path is shown.
 
 	restart
 		Restart the Finder.
-
-USAGE
-}
-
-maconf_help_dock_hiddenapps() {
-cat <<USAGE
-Usage: $scriptname [options] dock fullpath [hide|show]
-
-Get or set whether or not the full path is shown.
 
 USAGE
 }
@@ -286,6 +298,29 @@ cat <<USAGE
 Usage: $scriptname [options] finder restart
 
 Restart the Finder.
+
+USAGE
+}
+
+maconf_help_screencapture() {
+cat <<USAGE
+Usage: $scriptname [options] screencapture [args...]
+
+Get or set settings related to screen captures.
+
+Available settings:
+
+	location
+		Get or set the location where screen captures are saved.
+
+USAGE
+}
+
+maconf_help_screencapture_location() {
+cat <<USAGE
+Usage: $scriptname [options] screencapture location [path]
+
+Get or set the location where screen captures are saved.
 
 USAGE
 }
