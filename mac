@@ -1,0 +1,303 @@
+#!/bin/sh
+
+mac() {
+  ACTION=
+  SCRIPT_DIR="` dirname "$0" `"
+  SCRIPT_FILE_NAME="` basename "$0" `"
+  SCRIPT_NAME="` echo "$SCRIPT_FILE_NAME" | sed 's/-/_/g' `"
+
+  [ $# -lt 1 ] && "${SCRIPT_NAME}_help" && return 1
+
+  while getopts 'eh' OPTION
+  do
+    case "$OPTION" in
+      e) ACTION=edit ;;
+      h) ACTION=help ;;
+    esac
+  done
+
+  shift ` expr $OPTIND - 1 `
+
+  [ -z "$ACTION" ] && ACTION="$1"
+  shift
+
+  case "$ACTION" in
+    d|dock) ACTION=dock ;;
+    e) ACTION=edit ;;
+    f|finder) ACTION=finder ;;
+    h|usage) ACTION=help ;;
+    s) ACTION=screenshots ;;
+  esac
+
+  case "$ACTION" in
+    dock|finder|screenshots) "${SCRIPT_NAME}_context" "$@" ;;
+    edit|help) "${SCRIPT_NAME}_$ACTION" "$@" ;;
+    *) "${SCRIPT_NAME}_invalid" ;;
+  esac
+}
+
+mac_context() {
+  context="$ACTION"
+  command="$1"
+  function="${SCRIPT_NAME}_${context}_${command}"
+  shift
+
+  if _is_function "$function"
+  then
+    "$function" "$@"
+    return
+  fi
+
+  _error "Invalid command: $context $command"
+  _error
+
+  "${SCRIPT_NAME}_help_${context}" "$@"
+  return 1
+}
+
+mac_dock_addspacer() {
+  _echo "Adding spacer to Dock..."
+  defaults write com.apple.dock persistent-apps \
+    -array-add '{tile-data={}; tile-type="spacer-tile";}'
+  mac_dock_restart
+}
+
+mac_dock_delay() {
+  delay="$1"
+
+  [ -z "$delay" ] && delay="normal"
+
+  case "$delay" in
+    none) arg="-int 0" ;;
+    normal) arg="" ;;
+    short) arg="-float 0.12" ;;
+    *) arg="-float $delay" ;;
+  esac
+
+  _echo "Setting reveal delay to Dock..."
+
+  if [ -n "$arg" ]
+  then
+    defaults write com.apple.dock autohide-time-modifier $arg
+  else
+    defaults delete com.apple.dock autohide-time-modifier
+  fi
+
+  mac_dock_restart
+}
+
+mac_dock_hiddenapps() {
+  param="$1"
+
+  case "$param" in
+    reveal)
+      _echo "Setting hidden apps to be shown as translucent icons in Dock..."
+      arg="-bool TRUE"
+      ;;
+
+    conceal)
+      _echo "Setting hidden apps to be shown as opaque icons in Dock..."
+      arg="-bool FALSE"
+      ;;
+
+    *)
+      [ -n "$param" ] && _error "Invalid parameter: $param"
+      "${SCRIPT_NAME}_help_${ACTION}_hiddenapps"
+      return 1
+      ;;
+  esac
+
+  defaults write com.apple.Dock showhidden $arg
+  mac_dock_restart
+}
+
+mac_dock_restart() {
+  _echo "Restarting Dock..."
+  killall Dock
+}
+
+mac_edit() {
+  "$EDITOR" "$0"
+}
+
+mac_finder_fullpath() {
+  param="$1"
+
+  case "$param" in
+    hide)
+      _echo "Setting only current folder's name to be shown in Finder's title bar..."
+      arg="-bool FALSE"
+      ;;
+
+    show)
+      _echo "Setting full path to be shown in Finder's title bar..."
+      arg="-bool TRUE"
+      ;;
+
+    *)
+      [ -n "$param" ] && _error "Invalid parameter: $param"
+      "${SCRIPT_NAME}_help_${ACTION}_fullpath"
+      return 1
+      ;;
+  esac
+
+  defaults write com.apple.finder _FXShowPosixPathInTitle $arg
+  mac_finder_restart
+}
+
+mac_finder_restart() {
+  _echo "Restarting Finder..."
+  killall Finder
+}
+
+mac_help() {
+  action="$ACTION"
+  subject="$1"
+  command="$2"
+  function="${SCRIPT_NAME}_${action}_${subject}_${command}"
+  shift
+  shift
+
+  [ -z "$action" ] && action=help
+  [ -z "$subject" ] && subject=all
+
+  if _is_function "$function"
+  then
+    "$function" "$@"
+    return
+  fi
+
+  function="${SCRIPT_NAME}_${action}_${subject}"
+
+  if _is_function "$function"
+  then
+    "$function" "$@"
+    return
+  fi
+
+  _error "No help about: $subject $@"
+  _error
+
+  "${SCRIPT_NAME}_${action}_all" "$@"
+  return 1
+}
+
+mac_help_all() {
+  echo "Usage: $SCRIPT_FILE_NAME [options] [action|context] (arguments)"
+  echo
+  echo "Handy commands to tweak macOS."
+  echo
+  echo "Contexts:"
+  echo
+  echo "d dock    Commands for the Dock."
+  echo "f finder  Commands for Finder."
+  echo
+  echo "Actions:"
+  echo
+  echo "e edit    Edit script with \$EDITOR ($EDITOR)."
+  echo "h help    Show this help screen."
+  echo
+  echo "Options:"
+  echo
+  echo "-e        Edit script with \$EDITOR ($EDITOR)."
+  echo "-h        Show this help screen."
+  echo
+}
+
+mac_help_dock() {
+  echo "Usage: $SCRIPT_FILE_NAME [options] dock [commands]"
+  echo
+  echo "Commands for the Dock."
+  echo
+  echo "addspacer     Add blank draggable space to the Dock."
+  echo "delay         Set delay when Dock is revealed."
+  echo "hiddenapps    Adjust how hidden apps in Dock are shown."
+  echo "restart       Terminate the Dock. (Will restart automatically.)"
+  echo
+}
+
+mac_help_dock_delay() {
+  echo "Usage: $SCRIPT_FILE_NAME [options] dock delay [keyword|time]"
+  echo
+  echo "Set delay when Dock is revealed."
+  echo
+  echo "none      No delay."
+  echo "normal    Normal delay."
+  echo "short     Short delay."
+  echo "[time]    Set delay precisely to that time. (Can by an integer or float.)"
+  echo
+}
+
+mac_help_dock_hiddenapps() {
+  echo "Usage: $SCRIPT_FILE_NAME [options] dock hiddenapps [conceal|reveal]"
+  echo
+  echo "Adjust how hidden apps in Dock are shown."
+  echo
+  echo "conceal   Show icons for hidden apps in Dock as opaque."
+  echo "reveal    Show icons for hidden apps in Dock as translucent."
+  echo
+}
+
+mac_help_finder() {
+  echo "Usage: $SCRIPT_FILE_NAME [options] finder [commands]"
+  echo
+  echo "Commands for Finder."
+  echo
+  echo "fullpath    Adjust how full path is shown in Finder's title bar."
+  echo "restart     Terminate Finder. (Will restart automatically.)"
+  echo
+}
+
+mac_help_finder_fullpath() {
+  echo "Usage: $SCRIPT_FILE_NAME [options] finder fullpath [hide|show]"
+  echo
+  echo "Adjust how full path is shown in Finder's title bar."
+  echo
+  echo "hide     Only show current folder's name in Finder's title bar."
+  echo "show     Show full path in Finder's title bar."
+  echo
+}
+
+mac_invalid() {
+  _error "Invalid action: $ACTION"
+  _error
+
+  "$SCRIPT_NAME" help
+  return 1
+}
+
+mac_screenshots_format() {
+  format="$1"
+
+  [ -z "$format" ] && format="jpg"
+
+  case "$delay" in
+    jpeg) format="jpg" ;;
+  esac
+
+  _echo "Setting screenshots format to ${format}..."
+
+  defaults write com.apple.screencapture type $format
+
+  mac_screenshots_restart
+}
+
+mac_screenshots_restart() {
+  _echo "Restarting SystemUIServer..."
+  killall SystemUIServer
+}
+
+_echo() {
+  echo $@
+}
+
+_error() {
+  _echo $@ 1>&2
+}
+
+_is_function() {
+  function="$1"
+  type -t "$function" 2>&1 > /dev/null
+}
+
+mac "$@"
