@@ -1,0 +1,296 @@
+#!/bin/sh
+# maconf
+# Get and set various settings in macOS.
+
+maconf_main() {
+	scriptpath="` realpath "$0" `"  
+	scriptname="` basename "$scriptpath" `"
+	scriptdir="` dirname "$scriptpath" `"
+
+	e_args=16
+	e_no_defaults=17
+
+	while getopts h opt
+	do
+		case $opt in
+			h) maconf_help && return ;;
+			*) _invalid_opt "$opt" ;;
+		esac
+	done
+
+	shift ` expr $OPTIND - 1 `
+
+	[ -z "$cmd" ] && cmd="$1"
+	shift
+
+	[ -z "$cmd" ] && cmd="help"
+
+	case "$cmd" in
+		dock|finder)
+			"maconf_$cmd" "$@" ;;
+		help|usage) maconf_help "$@" ;;
+		*) _invalid_arg "$cmd" ;;
+	esac
+
+	return $?
+}
+
+maconf_dock() {
+	option="$1"
+	[ -z "$option" ] && maconf_help_dock && return
+
+	shift
+
+	case "$option" in
+		addspacer|delay|hiddenapps|restart)
+			"maconf_${cmd}_$option" "$@" ;;
+		*) _invalid_arg "$option" ;;
+	esac
+}
+
+maconf_dock_addspacer() {
+  _echo "Adding spacer to Dock..."
+  _write com.apple.dock persistent-apps \
+    -array-add '{tile-data={}; tile-type="spacer-tile";}'
+  _restart_dock
+}
+
+maconf_dock_delay() {
+  val="$1"
+  [ -z "$val" ] && _read com.apple.dock autohide-time-modifier && return
+
+	args=
+
+  case "$val" in
+    none) args="-int 0" ;;
+    normal) args="" ;;
+    short) args="-float 0.12" ;;
+    *) args="-float $val" ;;
+  esac
+
+  _echo "Setting reveal delay of Dock..."
+
+  if [ -z "$args" ]
+  then
+    defaults delete com.apple.dock autohide-time-modifier
+  else
+    defaults write com.apple.dock autohide-time-modifier $args
+  fi
+
+  mac_dock_restart
+}
+
+maconf_dock_hiddenapps() {
+	val="$1"
+	[ -z "$val" ] && _read com.apple.Dock showhidden && return
+
+	args=
+
+	case "$val" in
+		conceal)
+      _echo 'Setting hidden apps to be shown as opaque icons in Dock...'
+			args='-bool FALSE'
+			;;
+
+		reveal)
+      _echo 'Setting hidden apps to be shown as translucent icons in Dock...'
+			args='-bool TRUE'
+			;;
+
+		*) _invalid_arg "$args" ;;
+	esac
+
+  _write com.apple.Dock showhidden $args
+	_restart_dock
+}
+
+maconf_dock_restart() {
+	_restart_dock
+}
+
+maconf_finder() {
+	option="$1"
+	[ -z "$option" ] && maconf_help_finder && return
+
+	shift
+
+	case "$option" in
+		fullpath|restart)
+			"maconf_${cmd}_$option" "$@" ;;
+		*) _invalid_arg "$option" ;;
+	esac
+}
+
+maconf_finder_fullpath() {
+	val="$1"
+	[ -z "$val" ] && _read com.apple.finder _FXShowPosixPathInTitle && return
+
+	args=
+
+	case "$val" in
+		hide)
+      _echo "Setting only current folder's name to be shown in Finder's title bar..."
+			args='-bool FALSE'
+			;;
+
+		show)
+      _echo "Setting full path to be shown in Finder's title bar..."
+			args='-bool TRUE'
+			;;
+
+		*) _invalid_arg "$args" ;;
+	esac
+
+  _write com.apple.finder _FXShowPosixPathInTitle $args
+	_restart_finder
+}
+
+maconf_finder_restart() {
+	_restart_finder
+}
+
+maconf_help() {
+	help_cmd="$1"
+
+	case "$help_cmd" in
+		dock|finder)
+			"maconf_help_${help_cmd}" "$@"
+			;;
+		*) maconf_help_all ;;
+	esac
+}
+
+maconf_help_all() {
+cat <<USAGE
+Usage: $scriptname [options] command
+
+Get and set various settings in macOS.
+
+Available commands:
+
+	dock      Get or set settings related to the Dock.
+	finder    Get or set settings related to the Finder.
+
+	help      Show this help screen.
+
+Available options:
+
+	-h        Show this help screen.
+
+USAGE
+}
+
+maconf_help_dock() {
+cat <<USAGE
+Usage: $scriptname [options] dock [args...]
+
+Get or set settings related to the Dock.
+
+Available settings:
+
+	addspacer
+		Add spacer to Dock.
+
+	delay
+		Get delay before Dock appears in seconds.
+
+	delay [none|normal|short|custom]
+		Set delay before Dock appears.
+		Can be specified as 'none', 'normal', 'short',
+		or using an integer or float in seconds.
+
+	hiddenapps
+		Get whether apps hidden in Dock appear
+		as opaque or translucent.
+
+	hiddenapps [conceal|reveal]
+		Set whether apps hidden in Dock should appear
+		as opaque (reveal) or translucent (conceal).
+
+	restart
+		Restart the Dock.
+
+USAGE
+}
+
+maconf_help_finder() {
+cat <<USAGE
+Usage: $scriptname [options] finder [args...]
+
+Get or set settings related to the Finder.
+
+Available settings:
+
+	fullpath
+		Get whether or not the full path is shown.
+
+	fullpath [hide|show]
+		Set whether (show) or not (hide) the full path should be shown.
+
+	restart
+		Restart the Finder.
+
+USAGE
+}
+
+_defaults() {
+	_require_defaults
+	defaults "$@"
+}
+
+_delete() {
+	_defaults delete "$1" "$2"
+}
+
+_read() {
+	_defaults read "$1" "$2"
+}
+
+_echo() {
+	echo "$@"
+}
+
+_error() {
+	_echo "$@" >&2
+}
+
+_fatal() {
+	local exit_code
+	exit_code="$1"
+	shift
+	_error "$@"
+	exit "$exit_code"
+}
+
+_invalid_arg() {
+	_error "Invalid argument: $1"
+	_echo
+	exit $e_args
+}
+
+_invalid_opt() {
+	_error "Invalid option: $1"
+	_echo
+	exit $e_args
+}
+
+_require_defaults() {
+	which defaults 2>&1 > /dev/null && return
+	_fatal $e_no_defaults "The defaults program is missing. Are you running this on macOS?"
+}
+
+_restart_dock() {
+  _echo "Restarting Dock..."
+  killall Dock
+}
+
+_restart_finder() {
+  _echo "Restarting Finder..."
+  killall Finder
+}
+
+_write() {
+	_defaults write "$1" "$2" "$3"
+}
+
+maconf_main "$@"
