@@ -46,6 +46,7 @@ maconf_process() {
 		finder_fullpath|\
 		finder_restart|\
 		screencapture_|\
+		screencapture_format|\
 		screencapture_location)
 			[ -z "$arg2" ] && "maconf_help_$arg1" "$@" && return
 			[ $help -ne 0 ] && "maconf_help_${arg1}_$arg2" "$@" && return
@@ -165,6 +166,24 @@ maconf_finder_fullpath() {
 
 maconf_finder_restart() {
 	_restart_finder
+}
+
+maconf_screencapture_format() {
+	val="$1"
+	
+	if [ -z "$val" ]
+	then
+		_read com.apple.screencapture type
+		return
+	fi
+
+	args=
+
+	case "$val" in
+		jpeg) val=jpg ;;
+	esac
+
+  _write com.apple.screencapture type "$val"
 }
 
 maconf_screencapture_location() {
@@ -310,8 +329,20 @@ Get or set settings related to screen captures.
 
 Available settings:
 
+	format
+		Get or set the format of screen capture files.
+
 	location
 		Get or set the location where screen captures are saved.
+
+USAGE
+}
+
+maconf_help_screencapture_format() {
+cat <<USAGE
+Usage: $scriptname [options] screencapture format [jpg|png]
+
+Get or set the format of screen capture files.
 
 USAGE
 }
