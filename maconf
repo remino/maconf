@@ -10,6 +10,8 @@ maconf_main() {
 	e_args=16
 	e_no_defaults=17
 
+	help=0
+
 	while getopts h opt
 	do
 		case $opt in
@@ -20,50 +22,67 @@ maconf_main() {
 
 	shift ` expr $OPTIND - 1 `
 
-	[ -z "$cmd" ] && cmd="$1"
-	shift
-
-	[ -z "$cmd" ] && cmd="help"
-
-	case "$cmd" in
-		dock|finder)
-			"maconf_$cmd" "$@" ;;
-		help|usage) maconf_help "$@" ;;
-		*) _invalid_arg "$cmd" ;;
-	esac
+	maconf_process "$@"
 
 	return $?
 }
 
-maconf_dock() {
-	option="$1"
-	[ -z "$option" ] && maconf_help_dock && return
+maconf_process() {
+	[ $# -lt 1 ] && maconf_help && return
 
-	shift
+	arg1="$1"
+	[ -n "$arg1" ] && shift
 
-	case "$option" in
-		addspacer|delay|hiddenapps|restart)
-			"maconf_${cmd}_$option" "$@" ;;
-		*) _invalid_arg "$option" ;;
+	arg2="$1"
+	[ -n "$arg2" ] && shift
+
+	case "${arg1}_$arg2" in
+		dock_|\
+		dock_addspacer|\
+		dock_delay|\
+		dock_hiddenapps|\
+		dock_restart|\
+		finder_|\
+		finder_fullpath|\
+		finder_restart)
+			[ -z "$arg2" ] && "maconf_help_$arg1" "$@" && return
+			[ $help -ne 0 ] && "maconf_help_${arg1}_$arg2" "$@" && return
+			"maconf_${arg1}_$arg2" "$@"
+			;;
+
+		help_*|usage_*)
+			help=1
+			shift
+			maconf_process "$@"
+			;;
+
+		*) _invalid_arg "$arg1" "$arg2" ;;
 	esac
 }
 
 maconf_dock_addspacer() {
   _echo "Adding spacer to Dock..."
+
   _write com.apple.dock persistent-apps \
     -array-add '{tile-data={}; tile-type="spacer-tile";}'
+
   _restart_dock
 }
 
 maconf_dock_delay() {
   val="$1"
-  [ -z "$val" ] && _read com.apple.dock autohide-time-modifier && return
+	
+	if [ -z "$val" ]
+	then
+		_read com.apple.dock autohide-time-modifier
+		return
+	fi
 
 	args=
 
   case "$val" in
     none) args="-int 0" ;;
-    normal) args="" ;;
+    normal|reset) args="" ;;
     short) args="-float 0.12" ;;
     *) args="-float $val" ;;
   esac
@@ -77,12 +96,17 @@ maconf_dock_delay() {
     defaults write com.apple.dock autohide-time-modifier $args
   fi
 
-  mac_dock_restart
+  _restart_dock
 }
 
 maconf_dock_hiddenapps() {
 	val="$1"
-	[ -z "$val" ] && _read com.apple.Dock showhidden && return
+	
+	if [ -z "$val" ]
+	then
+		_read com.apple.Dock showhidden
+		return
+	fi
 
 	args=
 
@@ -97,7 +121,7 @@ maconf_dock_hiddenapps() {
 			args='-bool TRUE'
 			;;
 
-		*) _invalid_arg "$args" ;;
+		*) _invalid_arg "$val" ;;
 	esac
 
   _write com.apple.Dock showhidden $args
@@ -108,22 +132,14 @@ maconf_dock_restart() {
 	_restart_dock
 }
 
-maconf_finder() {
-	option="$1"
-	[ -z "$option" ] && maconf_help_finder && return
-
-	shift
-
-	case "$option" in
-		fullpath|restart)
-			"maconf_${cmd}_$option" "$@" ;;
-		*) _invalid_arg "$option" ;;
-	esac
-}
-
 maconf_finder_fullpath() {
 	val="$1"
-	[ -z "$val" ] && _read com.apple.finder _FXShowPosixPathInTitle && return
+	
+	if [ -z "$val" ]
+	then
+		_read com.apple.finder _FXShowPosixPathInTitle
+		return
+	fi
 
 	args=
 
@@ -138,7 +154,7 @@ maconf_finder_fullpath() {
 			args='-bool TRUE'
 			;;
 
-		*) _invalid_arg "$args" ;;
+		*) _invalid_arg "$val" ;;
 	esac
 
   _write com.apple.finder _FXShowPosixPathInTitle $args
@@ -168,14 +184,14 @@ Get and set various settings in macOS.
 
 Available commands:
 
-	dock      Get or set settings related to the Dock.
-	finder    Get or set settings related to the Finder.
+	dock       Get or set settings related to the Dock.
+	finder     Get or set settings related to the Finder.
 
-	help      Show this help screen.
+	help       Show this help screen.
 
 Available options:
 
-	-h        Show this help screen.
+	-h         Show this help screen.
 
 USAGE
 }
@@ -192,23 +208,49 @@ Available settings:
 		Add spacer to Dock.
 
 	delay
-		Get delay before Dock appears in seconds.
-
-	delay [none|normal|short|custom]
-		Set delay before Dock appears.
-		Can be specified as 'none', 'normal', 'short',
-		or using an integer or float in seconds.
+		Get or set delay before Dock appears in seconds.
 
 	hiddenapps
-		Get whether apps hidden in Dock appear
-		as opaque or translucent.
-
-	hiddenapps [conceal|reveal]
-		Set whether apps hidden in Dock should appear
-		as opaque (reveal) or translucent (conceal).
+		Get or set whether apps hidden in Dock appear as opaque or transparent.
 
 	restart
 		Restart the Dock.
+
+USAGE
+}
+
+maconf_help_dock_addspacer() {
+cat <<USAGE
+Usage: $scriptname [options] dock addspacer
+
+Add spacer to Dock.
+
+USAGE
+}
+
+maconf_help_dock_delay() {
+cat <<USAGE
+Usage: $scriptname [options] dock delay [time_in_seconds]
+
+Get or set delay before Dock appears in seconds.
+
+USAGE
+}
+
+maconf_help_dock_hiddenapps() {
+cat <<USAGE
+Usage: $scriptname [options] dock hiddenapps [conceal|reveal]
+
+Get or set whether apps hidden in Dock appear as opaque or transparent.
+
+USAGE
+}
+
+maconf_help_dock_restart() {
+cat <<USAGE
+Usage: $scriptname [options] dock restart
+
+Restart the Dock.
 
 USAGE
 }
@@ -224,11 +266,26 @@ Available settings:
 	fullpath
 		Get whether or not the full path is shown.
 
-	fullpath [hide|show]
-		Set whether (show) or not (hide) the full path should be shown.
-
 	restart
 		Restart the Finder.
+
+USAGE
+}
+
+maconf_help_dock_hiddenapps() {
+cat <<USAGE
+Usage: $scriptname [options] dock fullpath [hide|show]
+
+Get or set whether or not the full path is shown.
+
+USAGE
+}
+
+maconf_help_finder_restart() {
+cat <<USAGE
+Usage: $scriptname [options] finder restart
+
+Restart the Finder.
 
 USAGE
 }
@@ -239,11 +296,11 @@ _defaults() {
 }
 
 _delete() {
-	_defaults delete "$1" "$2"
+	_defaults delete "$@"
 }
 
 _read() {
-	_defaults read "$1" "$2"
+	_defaults read "$@"
 }
 
 _echo() {
@@ -263,7 +320,7 @@ _fatal() {
 }
 
 _invalid_arg() {
-	_error "Invalid argument: $1"
+	_error "Invalid argument: $*"
 	_echo
 	exit $e_args
 }
@@ -290,7 +347,7 @@ _restart_finder() {
 }
 
 _write() {
-	_defaults write "$1" "$2" "$3"
+	_defaults write "$@"
 }
 
 maconf_main "$@"
