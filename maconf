@@ -66,8 +66,18 @@ maconf_process() {
 maconf_dock_addspacer() {
   _echo "Adding spacer to Dock..."
 
+	tile_type=
+	size="$1"
+	[ -z "$size" ] && size=wide
+
+	case "$size" in
+		narrow) tile_type=small-spacer-tile ;;
+		wide) tile_type=spacer-tile ;;
+		*) _invalid_arg "$size" ;;
+	esac
+
   _write com.apple.dock persistent-apps \
-    -array-add '{tile-data={}; tile-type="spacer-tile";}'
+    -array-add "{tile-data={}; tile-type=\"$tile_type\";}"
 
   _restart_dock
 }
@@ -250,9 +260,12 @@ USAGE
 
 maconf_help_dock_addspacer() {
 cat <<USAGE
-Usage: $scriptname [options] dock addspacer
+Usage: $scriptname [options] dock addspacer [narrow|wide]
 
 Add spacer to Dock.
+
+	narrow      Add narrow space.
+	wide        Add wide space. (Default.)
 
 USAGE
 }
