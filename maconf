@@ -30,11 +30,11 @@ maconf_main() {
 maconf_process() {
 	[ $# -lt 1 ] && maconf_help && return
 
-	arg1="$1"
-	[ -n "$arg1" ] && shift
+	arg1=
+	arg2=
 
-	arg2="$1"
-	[ -n "$arg2" ] && shift
+	[ -n "$1" ] && arg1="$1" && shift
+	[ -n "$1" ] && arg2="$1" && shift
 
 	case "${arg1}_$arg2" in
 		dock_|\
@@ -55,8 +55,8 @@ maconf_process() {
 
 		help_*|usage_*)
 			help=1
-			shift
-			maconf_process "$@"
+			[ -z "$arg2" ] && maconf_process && return
+			maconf_process "$arg2" "$@"
 			;;
 
 		*) _invalid_arg "$arg1" "$arg2" ;;
@@ -199,17 +199,6 @@ maconf_screencapture_location() {
 }
 
 maconf_help() {
-	help_cmd="$1"
-
-	case "$help_cmd" in
-		dock|finder)
-			"maconf_help_${help_cmd}" "$@"
-			;;
-		*) maconf_help_all ;;
-	esac
-}
-
-maconf_help_all() {
 cat <<USAGE
 Usage: $scriptname [options] command
 
