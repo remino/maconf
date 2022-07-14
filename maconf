@@ -41,6 +41,7 @@ maconf_process() {
 		dock_addspacer|\
 		dock_delay|\
 		dock_hiddenapps|\
+		dock_position|\
 		dock_restart|\
 		finder_|\
 		finder_fullpath|\
@@ -108,6 +109,29 @@ maconf_dock_delay() {
   else
     defaults write com.apple.dock autohide-time-modifier $args
   fi
+
+  _restart_dock
+}
+
+maconf_dock_position() {
+  val="$1"
+	
+	if [ -z "$val" ]
+	then
+		_read com.apple.dock orientation
+		return
+	fi
+
+	args=
+
+  case "$val" in
+    bottom|left|right) args="-string $val" ;;
+    *) _invalid_arg "$val" ;;
+  esac
+
+  _echo "Setting Dock position to $val..."
+
+	defaults write com.apple.dock orientation $args
 
   _restart_dock
 }
@@ -252,6 +276,9 @@ Available settings:
 	hiddenapps
 		Get or set whether apps hidden in Dock appear as opaque or transparent.
 
+	position
+		Get or set the position of the Dock.
+
 	restart
 		Restart the Dock.
 
@@ -284,6 +311,15 @@ cat <<USAGE
 Usage: $scriptname [options] dock hiddenapps [conceal|reveal]
 
 Get or set whether apps hidden in Dock appear as opaque or transparent.
+
+USAGE
+}
+
+maconf_help_dock_position() {
+cat <<USAGE
+Usage: $scriptname [options] dock position [bottom|left|right]
+
+Get or set the position of the Dock.
 
 USAGE
 }
