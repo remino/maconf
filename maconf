@@ -3,9 +3,8 @@
 # Get and set various settings in macOS.
 
 maconf_main() {
-	scriptpath="` realpath "$0" `"  
-	scriptname="` basename "$scriptpath" `"
-	scriptdir="` dirname "$scriptpath" `"
+	scriptpath="$( realpath "$0" )"
+	scriptname="$( basename "$scriptpath" )"
 
 	e_args=16
 	e_no_defaults=17
@@ -20,7 +19,7 @@ maconf_main() {
 		esac
 	done
 
-	shift ` expr $OPTIND - 1 `
+	shift $(( OPTIND - 1 ))
 
 	maconf_process "$@"
 
@@ -65,7 +64,7 @@ maconf_process() {
 }
 
 maconf_dock_addspacer() {
-  _echo "Adding spacer to Dock..."
+	_echo "Adding spacer to Dock..."
 
 	tile_type=
 	size="$1"
@@ -77,14 +76,14 @@ maconf_dock_addspacer() {
 		*) _invalid_arg "$size" ;;
 	esac
 
-  _write com.apple.dock persistent-apps \
-    -array-add "{tile-data={}; tile-type=\"$tile_type\";}"
+	_write com.apple.dock persistent-apps \
+		-array-add "{tile-data={}; tile-type=\"$tile_type\";}"
 
-  _restart_dock
+	_restart_dock
 }
 
 maconf_dock_delay() {
-  val="$1"
+	val="$1"
 	
 	if [ -z "$val" ]
 	then
@@ -94,27 +93,27 @@ maconf_dock_delay() {
 
 	args=
 
-  case "$val" in
-    none) args="-int 0" ;;
-    normal|reset) args="" ;;
-    short) args="-float 0.12" ;;
-    *) args="-float $val" ;;
-  esac
+	case "$val" in
+		none) args="-int 0" ;;
+		normal|reset) args="" ;;
+		short) args="-float 0.12" ;;
+		*) args="-float $val" ;;
+	esac
 
-  _echo "Setting reveal delay of Dock..."
+	_echo "Setting reveal delay of Dock..."
 
-  if [ -z "$args" ]
-  then
-    defaults delete com.apple.dock autohide-time-modifier
-  else
-    defaults write com.apple.dock autohide-time-modifier $args
-  fi
+	if [ -z "$args" ]
+	then
+		defaults delete com.apple.dock autohide-time-modifier
+	else
+		echo "$args" | xargs defaults write com.apple.dock autohide-time-modifier
+	fi
 
-  _restart_dock
+	_restart_dock
 }
 
 maconf_dock_position() {
-  val="$1"
+	val="$1"
 	
 	if [ -z "$val" ]
 	then
@@ -124,16 +123,16 @@ maconf_dock_position() {
 
 	args=
 
-  case "$val" in
-    bottom|left|right) args="-string $val" ;;
-    *) _invalid_arg "$val" ;;
-  esac
+	case "$val" in
+		bottom|left|right) args="-string $val" ;;
+		*) _invalid_arg "$val" ;;
+	esac
 
-  _echo "Setting Dock position to $val..."
+	_echo "Setting Dock position to $val..."
 
-	defaults write com.apple.dock orientation $args
+	echo "$args" | xargs defaults write com.apple.dock orientation
 
-  _restart_dock
+	_restart_dock
 }
 
 maconf_dock_hiddenapps() {
@@ -149,19 +148,19 @@ maconf_dock_hiddenapps() {
 
 	case "$val" in
 		conceal)
-      _echo 'Setting hidden apps to be shown as opaque icons in Dock...'
+			_echo 'Setting hidden apps to be shown as opaque icons in Dock...'
 			args='-bool FALSE'
 			;;
 
 		reveal)
-      _echo 'Setting hidden apps to be shown as translucent icons in Dock...'
+			_echo 'Setting hidden apps to be shown as translucent icons in Dock...'
 			args='-bool TRUE'
 			;;
 
 		*) _invalid_arg "$val" ;;
 	esac
 
-  _write com.apple.Dock showhidden $args
+	_write com.apple.Dock showhidden "$args"
 	_restart_dock
 }
 
@@ -182,19 +181,19 @@ maconf_finder_fullpath() {
 
 	case "$val" in
 		hide)
-      _echo "Setting only current folder's name to be shown in Finder's title bar..."
+			_echo "Setting only current folder's name to be shown in Finder's title bar..."
 			args='-bool FALSE'
 			;;
 
 		show)
-      _echo "Setting full path to be shown in Finder's title bar..."
+			_echo "Setting full path to be shown in Finder's title bar..."
 			args='-bool TRUE'
 			;;
 
 		*) _invalid_arg "$val" ;;
 	esac
 
-  _write com.apple.finder _FXShowPosixPathInTitle $args
+	_write com.apple.finder _FXShowPosixPathInTitle "$args"
 	_restart_finder
 }
 
@@ -217,7 +216,7 @@ maconf_screencapture_format() {
 		jpeg) val=jpg ;;
 	esac
 
-  _write com.apple.screencapture type "$val"
+	_write com.apple.screencapture type "$val"
 }
 
 maconf_screencapture_location() {
@@ -229,7 +228,7 @@ maconf_screencapture_location() {
 		return
 	fi
 
-  _write com.apple.screencapture location "$val"
+	_write com.apple.screencapture location "$val"
 }
 
 maconf_help() {
@@ -416,7 +415,6 @@ _error() {
 }
 
 _fatal() {
-	local exit_code
 	exit_code="$1"
 	shift
 	_error "$@"
@@ -436,18 +434,18 @@ _invalid_opt() {
 }
 
 _require_defaults() {
-	which defaults 2>&1 > /dev/null && return
+	which defaults > /dev/null 2>&1 && return
 	_fatal $e_no_defaults "The defaults program is missing. Are you running this on macOS?"
 }
 
 _restart_dock() {
-  _echo "Restarting Dock..."
-  killall Dock
+	_echo "Restarting Dock..."
+	killall Dock
 }
 
 _restart_finder() {
-  _echo "Restarting Finder..."
-  killall Finder
+	_echo "Restarting Finder..."
+	killall Finder
 }
 
 _write() {
