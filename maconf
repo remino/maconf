@@ -2,7 +2,7 @@
 # maconf
 # Get and set various settings in macOS.
 
-VERSION="1.0.0"
+VERSION="1.1.0"
 
 maconf_main() {
 	scriptpath="$( realpath "$0" )"
