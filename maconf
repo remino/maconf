@@ -88,7 +88,7 @@ maconf_dock_addspacer() {
 
 maconf_dock_delay() {
 	val="$1"
-	
+
 	if [ -z "$val" ]
 	then
 		_read com.apple.dock autohide-time-modifier
@@ -118,7 +118,7 @@ maconf_dock_delay() {
 
 maconf_dock_position() {
 	val="$1"
-	
+
 	if [ -z "$val" ]
 	then
 		_read com.apple.dock orientation
@@ -141,7 +141,7 @@ maconf_dock_position() {
 
 maconf_dock_hiddenapps() {
 	val="$1"
-	
+
 	if [ -z "$val" ]
 	then
 		_read com.apple.Dock showhidden
@@ -174,7 +174,7 @@ maconf_dock_restart() {
 
 maconf_finder_fullpath() {
 	val="$1"
-	
+
 	if [ -z "$val" ]
 	then
 		_read com.apple.finder _FXShowPosixPathInTitle
@@ -207,7 +207,7 @@ maconf_finder_restart() {
 
 maconf_screencapture_format() {
 	val="$1"
-	
+
 	if [ -z "$val" ]
 	then
 		_read com.apple.screencapture type
@@ -225,7 +225,7 @@ maconf_screencapture_format() {
 
 maconf_screencapture_location() {
 	val="$1"
-	
+
 	if [ -z "$val" ]
 	then
 		_read com.apple.screencapture location
