@@ -50,7 +50,10 @@ maconf_process() {
 		finder_restart|\
 		screencapture_|\
 		screencapture_format|\
-		screencapture_location)
+		screencapture_location|\
+		users_|\
+		users_show|\
+		users_hide)
 			[ -z "$arg2" ] && "maconf_help_$arg1" "$@" && return
 			[ $help -ne 0 ] && "maconf_help_${arg1}_$arg2" "$@" && return
 			"maconf_${arg1}_$arg2" "$@"
@@ -255,6 +258,9 @@ Available commands:
 	help
 		Show this help screen.
 
+	users
+		Manage users.
+
 	version
 		Show version number.
 
@@ -399,6 +405,65 @@ Usage: $scriptname [options] screencapture location [path]
 Get or set the location where screen captures are saved.
 
 USAGE
+}
+
+maconf_help_users() {
+cat <<USAGE
+Usage: $scriptname [options] users [args...]
+
+Manage users.
+
+Available settings:
+
+	hide
+		Hide user from the login window.
+
+	show
+		Show user on the login window.
+
+USAGE
+}
+
+maconf_help_users_hide() {
+cat <<USAGE
+Usage: $scriptname [options] users hide [username]
+
+Hide user from the login window.
+
+USAGE
+}
+
+maconf_help_users_show() {
+cat <<USAGE
+Usage: $scriptname [options] users show [username]
+
+Show user on the login window.
+
+USAGE
+}
+
+maconf_users() {
+	action="$1"
+	username="$2"
+	ishidden=0
+
+	[ "$username" = "" ] && _fatal $e_args "Must specify username."
+
+	case "$action" in
+		hide) ishidden=1 ;;
+		show) ishidden=0 ;;
+		*) _invalid_arg "$action" ;;
+	esac
+
+	sudo dscl . create "/Users/$username" IsHidden "$ishidden"
+}
+
+maconf_users_hide() {
+	maconf_users hide "$1"
+}
+
+maconf_users_show() {
+	maconf_users show "$1"
 }
 
 maconf_version() {
