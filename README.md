@@ -2,7 +2,7 @@ maconf
 ======
 
 ```
-Usage: maconf [options] command
+Usage: maconf [-hv] command
 
 Get and set various settings in macOS.
 
@@ -20,9 +20,16 @@ Available commands:
 	help
 		Show this help screen.
 
+	users
+		Manage users.
+
+	version
+		Show version number.
+
 Available options:
 
 	-h         Show this help screen.
+	-v         Show version number.
 
 ```
 
