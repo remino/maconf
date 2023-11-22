@@ -51,6 +51,7 @@ maconf_process() {
 		screencapture_|\
 		screencapture_format|\
 		screencapture_location|\
+		screencapture_shadow|\
 		users_|\
 		users_show|\
 		users_hide)
@@ -238,6 +239,27 @@ maconf_screencapture_location() {
 	_write com.apple.screencapture location "$val"
 }
 
+maconf_screencapture_shadow() {
+	input="$1"
+
+	if [ -z "$input" ]
+	then
+		current="$( _read com.apple.screencapture disable-shadow )"
+		[ "$current" = "false" ] && _echo true && return
+		_echo false
+		return
+	fi
+
+	case "$input" in
+		true|yes|on) val=false ;;
+		false|no|off) val=true ;;
+		*) _invalid_arg "$input" ;;
+	esac
+
+	_write com.apple.screencapture disable-shadow "$val"
+	_restart_ui
+}
+
 maconf_help() {
 cat <<USAGE
 Usage: $scriptname [-hv] command
@@ -386,6 +408,9 @@ Available settings:
 	location
 		Get or set the location where screen captures are saved.
 
+	shadow
+		Get or set whether or not a shadow is included in screen captures.
+
 USAGE
 }
 
@@ -403,6 +428,15 @@ cat <<USAGE
 Usage: $scriptname [options] screencapture location [path]
 
 Get or set the location where screen captures are saved.
+
+USAGE
+}
+
+maconf_help_screencapture_shadow() {
+cat <<USAGE
+Usage: $scriptname [options] screencapture shadow [true|false]
+
+Get or set whether or not a shadow is included in screen captures.
 
 USAGE
 }
@@ -523,6 +557,11 @@ _restart_dock() {
 _restart_finder() {
 	_echo "Restarting Finder..."
 	killall Finder
+}
+
+_restart_ui() {
+	_echo "Restarting UI..."
+	killall SystemUIServer
 }
 
 _write() {
